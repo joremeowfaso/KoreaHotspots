@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>South Korea Hotspots</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -11,68 +12,74 @@
     <p>Filter and search locations across South Korea.</p>
 
     <!-- Controls -->
-    <div>
-        <label for="cityFilter">Filter by City:</label>
-        <select id="cityFilter">
-            <option value="All">All Cities</option>
-            <option value="Seoul">Seoul</option>
-            <option value="Busan">Busan</option>
-            <option value="Jeju">Jeju</option>
-        </select>
-
-        <label for="categoryFilter">Category:</label>
-        <select id="categoryFilter">
-            <option value="All">All Categories</option>
-            <option value="Food">Food</option>
-            <option value="Landmark">Landmark</option>
-            <option value="Shopping">Shopping</option>
-            <option value="Nature">Nature</option>
-        </select>
-
-        <label for="searchInput">Search:</label>
-        <input type="text" id="searchInput" placeholder="Type name or keyword...">
-    </div>
-
-    <hr>
-
-    <!-- Results Summary -->
-    <p id="resultCount"></p>
-
-    <!-- Hotspot List Output -->
-    <div id="hotspotList"></div>
-
-    <hr>
-
-    <!-- Add New Hotspot Form (Mutates the JSON array in memory) -->
-    <h2>Add a Hotspot</h2>
-    <form id="addHotspotForm">
-        <div>
-            <label for="newName">Name:</label>
-            <input type="text" id="newName" required>
-        </div>
-        <div>
-            <label for="newCity">City:</label>
-            <select id="newCity">
+    <section class="controls">
+        <div class="control-group">
+            <label for="cityFilter">Filter by City</label>
+            <select id="cityFilter">
+                <option value="All">All Cities</option>
                 <option value="Seoul">Seoul</option>
                 <option value="Busan">Busan</option>
                 <option value="Jeju">Jeju</option>
             </select>
         </div>
-        <div>
-            <label for="newCategory">Category:</label>
-            <select id="newCategory">
+
+        <div class="control-group">
+            <label for="categoryFilter">Category</label>
+            <select id="categoryFilter">
+                <option value="All">All Categories</option>
                 <option value="Food">Food</option>
                 <option value="Landmark">Landmark</option>
                 <option value="Shopping">Shopping</option>
                 <option value="Nature">Nature</option>
             </select>
         </div>
-        <div>
-            <label for="newDescription">Description:</label>
-            <input type="text" id="newDescription" required>
+
+        <div class="control-group">
+            <label for="searchInput">Search</label>
+            <input type="text" id="searchInput" placeholder="Type name or keyword...">
         </div>
-        <button type="submit">Add Location</button>
-    </form>
+    </section>
+
+    <!-- Results Summary -->
+    <p id="resultCount" class="result-count"></p>
+
+    <!-- Hotspot List Output -->
+    <main id="hotspotList" class="hotspot-grid"></main>
+
+    <!-- Add New Hotspot Form -->
+    <section class="form-section">
+        <h2>Add a Hotspot</h2>
+        <form id="addHotspotForm">
+            <div class="form-grid">
+                <div class="control-group">
+                    <label for="newName">Name</label>
+                    <input type="text" id="newName" required>
+                </div>
+                <div class="control-group">
+                    <label for="newCity">City</label>
+                    <select id="newCity">
+                        <option value="Seoul">Seoul</option>
+                        <option value="Busan">Busan</option>
+                        <option value="Jeju">Jeju</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="newCategory">Category</label>
+                    <select id="newCategory">
+                        <option value="Food">Food</option>
+                        <option value="Landmark">Landmark</option>
+                        <option value="Shopping">Shopping</option>
+                        <option value="Nature">Nature</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="newDescription">Description</label>
+                    <input type="text" id="newDescription" required>
+                </div>
+            </div>
+            <button type="submit">Add Location</button>
+        </form>
+    </section>
 
     <script>
         // JSON Data Store
@@ -150,10 +157,14 @@
             }
 
             filtered.forEach(spot => {
-                const item = document.createElement("div");
+                const item = document.createElement("article");
+                item.className = "card";
                 item.innerHTML = `
-                    <h3>${spot.name} (${spot.city})</h3>
-                    <p><strong>Category:</strong> ${spot.category}</p>
+                    <div class="card-header">
+                        <h3>${spot.name}</h3>
+                        <span class="badge">${spot.category}</span>
+                    </div>
+                    <div class="city-label">${spot.city}</div>
                     <p>${spot.description}</p>
                 `;
                 hotspotList.appendChild(item);
