@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>South Korea Hotspots</title>
+</head>
+<body>
+
+    <h1>South Korea Hotspots Directory</h1>
+    <p>Filter and search locations across South Korea.</p>
+
+    <!-- Controls -->
+    <div>
+        <label for="cityFilter">Filter by City:</label>
+        <select id="cityFilter">
+            <option value="All">All Cities</option>
+            <option value="Seoul">Seoul</option>
+            <option value="Busan">Busan</option>
+            <option value="Jeju">Jeju</option>
+        </select>
+
+        <label for="categoryFilter">Category:</label>
+        <select id="categoryFilter">
+            <option value="All">All Categories</option>
+            <option value="Food">Food</option>
+            <option value="Landmark">Landmark</option>
+            <option value="Shopping">Shopping</option>
+            <option value="Nature">Nature</option>
+        </select>
+
+        <label for="searchInput">Search:</label>
+        <input type="text" id="searchInput" placeholder="Type name or keyword...">
+    </div>
+
+    <hr>
+
+    <!-- Results Summary -->
+    <p id="resultCount"></p>
+
+    <!-- Hotspot List Output -->
+    <div id="hotspotList"></div>
+
+    <hr>
+
+    <!-- Add New Hotspot Form (Mutates the JSON array in memory) -->
+    <h2>Add a Hotspot</h2>
+    <form id="addHotspotForm">
+        <div>
+            <label for="newName">Name:</label>
+            <input type="text" id="newName" required>
+        </div>
+        <div>
+            <label for="newCity">City:</label>
+            <select id="newCity">
+                <option value="Seoul">Seoul</option>
+                <option value="Busan">Busan</option>
+                <option value="Jeju">Jeju</option>
+            </select>
+        </div>
+        <div>
+            <label for="newCategory">Category:</label>
+            <select id="newCategory">
+                <option value="Food">Food</option>
+                <option value="Landmark">Landmark</option>
+                <option value="Shopping">Shopping</option>
+                <option value="Nature">Nature</option>
+            </select>
+        </div>
+        <div>
+            <label for="newDescription">Description:</label>
+            <input type="text" id="newDescription" required>
+        </div>
+        <button type="submit">Add Location</button>
+    </form>
+
+    <script>
+        // JSON Data Store
+        const hotspots = [
+            {
+                id: 1,
+                name: "Gwangjang Market",
+                city: "Seoul",
+                category: "Food",
+                description: "Historic traditional street market famous for bindaetteok (mung bean pancakes) and mayak gimbap."
+            },
+            {
+                id: 2,
+                name: "Gyeongbokgung Palace",
+                city: "Seoul",
+                category: "Landmark",
+                description: "Main royal palace of the Joseon dynasty with changing of the guard ceremonies."
+            },
+            {
+                id: 3,
+                name: "Seongsu-dong",
+                city: "Seoul",
+                category: "Shopping",
+                description: "Industrial warehouse district converted into flagship fashion stores and specialty cafes."
+            },
+            {
+                id: 4,
+                name: "Gamcheon Culture Village",
+                city: "Busan",
+                category: "Landmark",
+                description: "Hillside neighborhood known for colorful terraced houses, murals, and alleys."
+            },
+            {
+                id: 5,
+                name: "Haeundae Beach",
+                city: "Busan",
+                category: "Nature",
+                description: "Popular urban coastline surrounded by skyscrapers and seafood restaurants."
+            },
+            {
+                id: 6,
+                name: "Seongsan Ilchulbong",
+                city: "Jeju",
+                category: "Nature",
+                description: "Volcanic tuff cone crater offering coastal hiking trails and sunrise views."
+            }
+        ];
+
+        const cityFilter = document.getElementById("cityFilter");
+        const categoryFilter = document.getElementById("categoryFilter");
+        const searchInput = document.getElementById("searchInput");
+        const hotspotList = document.getElementById("hotspotList");
+        const resultCount = document.getElementById("resultCount");
+        const addHotspotForm = document.getElementById("addHotspotForm");
+
+        function renderHotspots() {
+            const selectedCity = cityFilter.value;
+            const selectedCategory = categoryFilter.value;
+            const query = searchInput.value.trim().toLowerCase();
+
+            const filtered = hotspots.filter(spot => {
+                const matchesCity = selectedCity === "All" || spot.city === selectedCity;
+                const matchesCategory = selectedCategory === "All" || spot.category === selectedCategory;
+                const matchesQuery = spot.name.toLowerCase().includes(query) ||
+                                     spot.description.toLowerCase().includes(query);
+                return matchesCity && matchesCategory && matchesQuery;
+            });
+
+            resultCount.textContent = `Showing ${filtered.length} of ${hotspots.length} hotspots`;
+            hotspotList.innerHTML = "";
+
+            if (filtered.length === 0) {
+                hotspotList.innerHTML = "<p>No hotspots match your filters.</p>";
+                return;
+            }
+
+            filtered.forEach(spot => {
+                const item = document.createElement("div");
+                item.innerHTML = `
+                    <h3>${spot.name} (${spot.city})</h3>
+                    <p><strong>Category:</strong> ${spot.category}</p>
+                    <p>${spot.description}</p>
+                `;
+                hotspotList.appendChild(item);
+            });
+        }
+
+        // Event Listeners for Live Filtering
+        cityFilter.addEventListener("change", renderHotspots);
+        categoryFilter.addEventListener("change", renderHotspots);
+        searchInput.addEventListener("input", renderHotspots);
+
+        // Handle Adding New Entries
+        addHotspotForm.addEventListener("submit", (event) => {
+            event.preventDefault();
+
+            const newSpot = {
+                id: hotspots.length + 1,
+                name: document.getElementById("newName").value.trim(),
+                city: document.getElementById("newCity").value,
+                category: document.getElementById("newCategory").value,
+                description: document.getElementById("newDescription").value.trim()
+            };
+
+            hotspots.push(newSpot);
+            addHotspotForm.reset();
+            renderHotspots();
+        });
+
+        // Initial Render
+        renderHotspots();
+    </script>
+</body>
+</html>
