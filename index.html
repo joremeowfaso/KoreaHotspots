@@ -11,49 +11,14 @@
     <header>
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
             <div>
-                <h1>South Korea Hotspots Directory</h1>
-                <p>Filter and search locations across South Korea.</p>
+                <h1>South Korea Hotspots</h1>
+                <p>Explore curated destinations or submit a new location with custom tags.</p>
             </div>
             <nav>
-                <a href="hotspot.html" style="color: var(--badge-text); text-decoration: none; font-weight: 600;">View Added Hotspots &rarr;</a>
+                <a href="hotspot.html" style="color: var(--badge-text); text-decoration: none; font-weight: 600;">Browse Hotspots &rarr;</a>
             </nav>
         </div>
     </header>
-
-    <!-- Controls -->
-    <section class="controls">
-        <div class="control-group">
-            <label for="cityFilter">Filter by City</label>
-            <select id="cityFilter">
-                <option value="All">All Cities</option>
-                <option value="Seoul">Seoul</option>
-                <option value="Busan">Busan</option>
-                <option value="Jeju">Jeju</option>
-            </select>
-        </div>
-
-        <div class="control-group">
-            <label for="categoryFilter">Category</label>
-            <select id="categoryFilter">
-                <option value="All">All Categories</option>
-                <option value="Food">Food</option>
-                <option value="Landmark">Landmark</option>
-                <option value="Shopping">Shopping</option>
-                <option value="Nature">Nature</option>
-            </select>
-        </div>
-
-        <div class="control-group">
-            <label for="searchInput">Search</label>
-            <input type="text" id="searchInput" placeholder="Type name or keyword...">
-        </div>
-    </section>
-
-    <!-- Results Summary -->
-    <p id="resultCount" class="result-count"></p>
-
-    <!-- Hotspot List Output -->
-    <main id="hotspotList" class="hotspot-grid"></main>
 
     <!-- Add New Hotspot Form -->
     <section class="form-section">
@@ -62,7 +27,7 @@
             <div class="form-grid">
                 <div class="control-group">
                     <label for="newName">Name</label>
-                    <input type="text" id="newName" required>
+                    <input type="text" id="newName" placeholder="e.g. Olive Young Myeongdong" required>
                 </div>
                 <div class="control-group">
                     <label for="newCity">City</label>
@@ -73,7 +38,7 @@
                     </select>
                 </div>
                 <div class="control-group">
-                    <label for="newCategory">Category</label>
+                    <label for="newCategory">Primary Category</label>
                     <select id="newCategory">
                         <option value="Food">Food</option>
                         <option value="Landmark">Landmark</option>
@@ -81,129 +46,110 @@
                         <option value="Nature">Nature</option>
                     </select>
                 </div>
-                <div class="control-group">
+                <div class="control-group" style="grid-column: 1 / -1;">
                     <label for="newDescription">Description</label>
-                    <input type="text" id="newDescription" required>
+                    <input type="text" id="newDescription" placeholder="Short description of the location..." required>
+                </div>
+
+                <!-- Tag Selection & Creation -->
+                <div class="control-group" style="grid-column: 1 / -1;">
+                    <label>Tags (Click to select or create a new tag)</label>
+                    <div id="tagSelector" class="tag-list"></div>
+
+                    <div class="custom-tag-row">
+                        <input type="text" id="customTagInput" placeholder="New tag name (e.g. Cafe, Nightlife)...">
+                        <button type="button" id="createTagBtn" class="btn-secondary">+ Create Tag</button>
+                    </div>
                 </div>
             </div>
-            <button type="submit">Add Location</button>
+            <button type="submit">Add Location &amp; View Directory</button>
         </form>
     </section>
 
     <script>
-        // JSON Data Store
-        const hotspots = [
-            {
-                id: 1,
-                name: "Gwangjang Market",
-                city: "Seoul",
-                category: "Food",
-                description: "Historic traditional street market famous for bindaetteok (mung bean pancakes) and mayak gimbap."
-            },
-            {
-                id: 2,
-                name: "Gyeongbokgung Palace",
-                city: "Seoul",
-                category: "Landmark",
-                description: "Main royal palace of the Joseon dynasty with changing of the guard ceremonies."
-            },
-            {
-                id: 3,
-                name: "Seongsu-dong",
-                city: "Seoul",
-                category: "Shopping",
-                description: "Industrial warehouse district converted into flagship fashion stores and specialty cafes."
-            },
-            {
-                id: 4,
-                name: "Gamcheon Culture Village",
-                city: "Busan",
-                category: "Landmark",
-                description: "Hillside neighborhood known for colorful terraced houses, murals, and alleys."
-            },
-            {
-                id: 5,
-                name: "Haeundae Beach",
-                city: "Busan",
-                category: "Nature",
-                description: "Popular urban coastline surrounded by skyscrapers and seafood restaurants."
-            },
-            {
-                id: 6,
-                name: "Seongsan Ilchulbong",
-                city: "Jeju",
-                category: "Nature",
-                description: "Volcanic tuff cone crater offering coastal hiking trails and sunrise views."
-            }
-        ];
+        const HOTSPOTS_KEY = "korea_hotspots_custom";
+        const TAGS_KEY = "korea_hotspots_tags";
+        const DEFAULT_TAGS = ["Scenery", "Shopping", "Beauty"];
 
-        const cityFilter = document.getElementById("cityFilter");
-        const categoryFilter = document.getElementById("categoryFilter");
-        const searchInput = document.getElementById("searchInput");
-        const hotspotList = document.getElementById("hotspotList");
-        const resultCount = document.getElementById("resultCount");
+        // Load saved tag list or initialize with basic tags
+        let availableTags = JSON.parse(localStorage.getItem(TAGS_KEY)) || [...DEFAULT_TAGS];
+        const selectedTags = new Set();
+
+        const tagSelector = document.getElementById("tagSelector");
+        const customTagInput = document.getElementById("customTagInput");
+        const createTagBtn = document.getElementById("createTagBtn");
         const addHotspotForm = document.getElementById("addHotspotForm");
 
-        function renderHotspots() {
-            const selectedCity = cityFilter.value;
-            const selectedCategory = categoryFilter.value;
-            const query = searchInput.value.trim().toLowerCase();
+        function renderTagPills() {
+            tagSelector.innerHTML = "";
+            availableTags.forEach(tag => {
+                const pill = document.createElement("span");
+                pill.className = "tag-pill selectable" + (selectedTags.has(tag) ? " selected" : "");
+                pill.textContent = selectedTags.has(tag) ? `✓ ${tag}` : tag;
 
-            const filtered = hotspots.filter(spot => {
-                const matchesCity = selectedCity === "All" || spot.city === selectedCity;
-                const matchesCategory = selectedCategory === "All" || spot.category === selectedCategory;
-                const matchesQuery = spot.name.toLowerCase().includes(query) ||
-                                     spot.description.toLowerCase().includes(query);
-                return matchesCity && matchesCategory && matchesQuery;
-            });
+                pill.addEventListener("click", () => {
+                    if (selectedTags.has(tag)) {
+                        selectedTags.delete(tag);
+                    } else {
+                        selectedTags.add(tag);
+                    }
+                    renderTagPills();
+                });
 
-            resultCount.textContent = `Showing ${filtered.length} of ${hotspots.length} hotspots`;
-            hotspotList.innerHTML = "";
-
-            if (filtered.length === 0) {
-                hotspotList.innerHTML = "<p>No hotspots match your filters.</p>";
-                return;
-            }
-
-            filtered.forEach(spot => {
-                const item = document.createElement("article");
-                item.className = "card";
-                item.innerHTML = `
-                    <div class="card-header">
-                        <h3>${spot.name}</h3>
-                        <span class="badge">${spot.category}</span>
-                    </div>
-                    <div class="city-label">${spot.city}</div>
-                    <p>${spot.description}</p>
-                `;
-                hotspotList.appendChild(item);
+                tagSelector.appendChild(pill);
             });
         }
 
-        // Event Listeners for Live Filtering
-        cityFilter.addEventListener("change", renderHotspots);
-        categoryFilter.addEventListener("change", renderHotspots);
-        searchInput.addEventListener("input", renderHotspots);
+        function addNewTag() {
+            const raw = customTagInput.value.trim();
+            if (!raw) return;
 
-        // Handle Adding New Entries
+            // Format cleanly (capitalize first letter)
+            const formatted = raw.charAt(0).toUpperCase() + raw.slice(1);
+
+            // Prevent case-insensitive duplicates
+            const existing = availableTags.find(t => t.toLowerCase() === formatted.toLowerCase());
+            if (existing) {
+                selectedTags.add(existing);
+            } else {
+                availableTags.push(formatted);
+                localStorage.setItem(TAGS_KEY, JSON.stringify(availableTags));
+                selectedTags.add(formatted);
+            }
+
+            customTagInput.value = "";
+            renderTagPills();
+        }
+
+        createTagBtn.addEventListener("click", addNewTag);
+        customTagInput.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                addNewTag();
+            }
+        });
+
         addHotspotForm.addEventListener("submit", (event) => {
             event.preventDefault();
 
+            const existingCustom = JSON.parse(localStorage.getItem(HOTSPOTS_KEY)) || [];
+
             const newSpot = {
-                id: hotspots.length + 1,
+                id: Date.now(),
                 name: document.getElementById("newName").value.trim(),
                 city: document.getElementById("newCity").value,
                 category: document.getElementById("newCategory").value,
-                description: document.getElementById("newDescription").value.trim()
+                description: document.getElementById("newDescription").value.trim(),
+                tags: Array.from(selectedTags)
             };
 
-            hotspots.push(newSpot);
-            addHotspotForm.reset();
-            renderHotspots();
+            existingCustom.push(newSpot);
+            localStorage.setItem(HOTSPOTS_KEY, JSON.stringify(existingCustom));
+
+            window.location.href = "hotspot.html";
         });
 
-        // Initial Render
-        renderHotspots();
+        renderTagPills();
     </script>
 </body>
 </html>

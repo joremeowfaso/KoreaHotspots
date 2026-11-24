@@ -3,22 +3,333 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Added Hotspots - South Korea Hotspots</title>
+    <title>Browse Hotspots - South Korea Hotspots</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <header>
-        <nav style="margin-bottom: 1rem;">
-            <a href="index.html" style="color: var(--badge-text); text-decoration: none; font-weight: 600;">&larr; Back to Directory</a>
-        </nav>
-        <h1>Added Hotspots</h1>
-        <p>Locations you have submitted will appear here.</p>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h1>Browse South Korea Hotspots</h1>
+                <p>Click any location card to view or manage its tags.</p>
+            </div>
+            <nav>
+                <a href="index.html" style="color: var(--badge-text); text-decoration: none; font-weight: 600;">+ Add New Hotspot</a>
+            </nav>
+        </div>
     </header>
 
-    <main id="hotspotList" class="hotspot-grid">
-        <!-- Added items will be rendered here later -->
-    </main>
+    <!-- Controls -->
+    <section class="controls">
+        <div class="control-group">
+            <label for="cityFilter">Filter by City</label>
+            <select id="cityFilter">
+                <option value="All">All Cities</option>
+                <option value="Seoul">Seoul</option>
+                <option value="Busan">Busan</option>
+                <option value="Jeju">Jeju</option>
+            </select>
+        </div>
 
+        <div class="control-group">
+            <label for="tagFilter">Filter by Tag</label>
+            <select id="tagFilter">
+                <option value="All">All Tags</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="searchInput">Search</label>
+            <input type="text" id="searchInput" placeholder="Type name or keyword...">
+        </div>
+    </section>
+
+    <!-- Results Summary -->
+    <p id="resultCount" class="result-count"></p>
+
+    <!-- Hotspot List Output -->
+    <main id="hotspotList" class="hotspot-grid"></main>
+
+    <!-- Tag Management Modal Overlay -->
+    <div id="tagModal" class="modal-overlay" role="dialog" aria-modal="true">
+        <div class="modal-content">
+            <button id="closeModalBtn" class="modal-close" aria-label="Close modal">Close &times;</button>
+            <div class="modal-body" style="padding-top: 2.5rem;">
+                <div class="card-header">
+                    <h3 id="modalTitle"></h3>
+                    <span id="modalCategory" class="badge"></span>
+                </div>
+                <div id="modalCity" class="city-label"></div>
+                <p id="modalDescription"></p>
+
+                <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 0.75rem 0;">
+
+                <h4 style="color: var(--badge-text); font-size: 0.95rem;">Manage Tags for This Location</h4>
+                <div id="modalTagSelector" class="tag-list"></div>
+
+                <div class="custom-tag-row">
+                    <input type="text" id="modalNewTagInput" placeholder="Add a new tag...">
+                    <button type="button" id="modalAddTagBtn" class="btn-secondary">+ Add Tag</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const HOTSPOTS_KEY = "korea_hotspots_custom";
+        const TAGS_KEY = "korea_hotspots_tags";
+        const OVERRIDES_KEY = "korea_hotspots_tag_overrides";
+        const DEFAULT_TAGS = ["Scenery", "Shopping", "Beauty"];
+
+        const defaultHotspots = [
+            {
+                id: 1,
+                name: "Gwangjang Market",
+                city: "Seoul",
+                category: "Food",
+                description: "Historic traditional street market famous for bindaetteok (mung bean pancakes) and mayak gimbap.",
+                tags: ["Shopping"]
+            },
+            {
+                id: 2,
+                name: "Gyeongbokgung Palace",
+                city: "Seoul",
+                category: "Landmark",
+                description: "Main royal palace of the Joseon dynasty with changing of the guard ceremonies.",
+                tags: ["Scenery"]
+            },
+            {
+                id: 3,
+                name: "Seongsu-dong",
+                city: "Seoul",
+                category: "Shopping",
+                description: "Industrial warehouse district converted into flagship fashion stores and specialty cafes.",
+                tags: ["Shopping", "Beauty"]
+            },
+            {
+                id: 4,
+                name: "Gamcheon Culture Village",
+                city: "Busan",
+                category: "Landmark",
+                description: "Hillside neighborhood known for colorful terraced houses, murals, and alleys.",
+                tags: ["Scenery"]
+            },
+            {
+                id: 5,
+                name: "Haeundae Beach",
+                city: "Busan",
+                category: "Nature",
+                description: "Popular urban coastline surrounded by skyscrapers and seafood restaurants.",
+                tags: ["Scenery"]
+            },
+            {
+                id: 6,
+                name: "Seongsan Ilchulbong",
+                city: "Jeju",
+                category: "Nature",
+                description: "Volcanic tuff cone crater offering coastal hiking trails and sunrise views.",
+                tags: ["Scenery"]
+            }
+        ];
+
+        let availableTags = JSON.parse(localStorage.getItem(TAGS_KEY)) || [...DEFAULT_TAGS];
+        let savedHotspots = JSON.parse(localStorage.getItem(HOTSPOTS_KEY)) || [];
+        let tagOverrides = JSON.parse(localStorage.getItem(OVERRIDES_KEY)) || {};
+
+        // Apply any saved tag edits to default hotspots
+        defaultHotspots.forEach(spot => {
+            if (tagOverrides[spot.id]) {
+                spot.tags = tagOverrides[spot.id];
+            }
+        });
+
+        let hotspots = [...defaultHotspots, ...savedHotspots];
+        let activeSpot = null;
+
+        const cityFilter = document.getElementById("cityFilter");
+        const tagFilter = document.getElementById("tagFilter");
+        const searchInput = document.getElementById("searchInput");
+        const hotspotList = document.getElementById("hotspotList");
+        const resultCount = document.getElementById("resultCount");
+
+        // Modal Elements
+        const tagModal = document.getElementById("tagModal");
+        const closeModalBtn = document.getElementById("closeModalBtn");
+        const modalTitle = document.getElementById("modalTitle");
+        const modalCategory = document.getElementById("modalCategory");
+        const modalCity = document.getElementById("modalCity");
+        const modalDescription = document.getElementById("modalDescription");
+        const modalTagSelector = document.getElementById("modalTagSelector");
+        const modalNewTagInput = document.getElementById("modalNewTagInput");
+        const modalAddTagBtn = document.getElementById("modalAddTagBtn");
+
+        function populateTagFilter() {
+            const currentSelection = tagFilter.value;
+            tagFilter.innerHTML = '<option value="All">All Tags</option>';
+            availableTags.forEach(tag => {
+                const option = document.createElement("option");
+                option.value = tag;
+                option.textContent = tag;
+                tagFilter.appendChild(option);
+            });
+            if (availableTags.includes(currentSelection)) {
+                tagFilter.value = currentSelection;
+            }
+        }
+
+        function saveSpotTags(spot) {
+            const isDefault = defaultHotspots.some(d => d.id === spot.id);
+            if (isDefault) {
+                tagOverrides[spot.id] = spot.tags;
+                localStorage.setItem(OVERRIDES_KEY, JSON.stringify(tagOverrides));
+            } else {
+                const idx = savedHotspots.findIndex(s => s.id === spot.id);
+                if (idx !== -1) {
+                    savedHotspots[idx].tags = spot.tags;
+                    localStorage.setItem(HOTSPOTS_KEY, JSON.stringify(savedHotspots));
+                }
+            }
+        }
+
+        function renderModalTags() {
+            if (!activeSpot) return;
+            modalTagSelector.innerHTML = "";
+
+            availableTags.forEach(tag => {
+                const isSelected = activeSpot.tags && activeSpot.tags.includes(tag);
+                const pill = document.createElement("span");
+                pill.className = "tag-pill selectable" + (isSelected ? " selected" : "");
+                pill.textContent = isSelected ? `✓ ${tag}` : tag;
+
+                pill.addEventListener("click", () => {
+                    if (!activeSpot.tags) activeSpot.tags = [];
+                    if (isSelected) {
+                        activeSpot.tags = activeSpot.tags.filter(t => t !== tag);
+                    } else {
+                        activeSpot.tags.push(tag);
+                    }
+                    saveSpotTags(activeSpot);
+                    renderModalTags();
+                    renderHotspots();
+                });
+
+                modalTagSelector.appendChild(pill);
+            });
+        }
+
+        function openModal(spot) {
+            activeSpot = spot;
+            modalTitle.textContent = spot.name;
+            modalCategory.textContent = spot.category;
+            modalCity.textContent = spot.city;
+            modalDescription.textContent = spot.description;
+            renderModalTags();
+            tagModal.classList.add("active");
+        }
+
+        function closeModal() {
+            tagModal.classList.remove("active");
+            activeSpot = null;
+        }
+
+        function handleModalNewTag() {
+            if (!activeSpot) return;
+            const raw = modalNewTagInput.value.trim();
+            if (!raw) return;
+
+            const formatted = raw.charAt(0).toUpperCase() + raw.slice(1);
+            let tagToUse = availableTags.find(t => t.toLowerCase() === formatted.toLowerCase());
+
+            if (!tagToUse) {
+                tagToUse = formatted;
+                availableTags.push(tagToUse);
+                localStorage.setItem(TAGS_KEY, JSON.stringify(availableTags));
+                populateTagFilter();
+            }
+
+            if (!activeSpot.tags) activeSpot.tags = [];
+            if (!activeSpot.tags.includes(tagToUse)) {
+                activeSpot.tags.push(tagToUse);
+                saveSpotTags(activeSpot);
+            }
+
+            modalNewTagInput.value = "";
+            renderModalTags();
+            renderHotspots();
+        }
+
+        function renderHotspots() {
+            const selectedCity = cityFilter.value;
+            const selectedTag = tagFilter.value;
+            const query = searchInput.value.trim().toLowerCase();
+
+            const filtered = hotspots.filter(spot => {
+                const spotTags = spot.tags || [];
+                const matchesCity = selectedCity === "All" || spot.city === selectedCity;
+                const matchesTag = selectedTag === "All" || spotTags.includes(selectedTag);
+                const matchesQuery = spot.name.toLowerCase().includes(query) ||
+                                     spot.description.toLowerCase().includes(query) ||
+                                     spotTags.some(t => t.toLowerCase().includes(query));
+                return matchesCity && matchesTag && matchesQuery;
+            });
+
+            resultCount.textContent = `Showing ${filtered.length} of ${hotspots.length} hotspots`;
+            hotspotList.innerHTML = "";
+
+            if (filtered.length === 0) {
+                hotspotList.innerHTML = "<p>No hotspots match your filters.</p>";
+                return;
+            }
+
+            filtered.forEach(spot => {
+                const item = document.createElement("article");
+                item.className = "card";
+
+                const tagsHtml = (spot.tags && spot.tags.length > 0)
+                    ? `<div class="tag-list">${spot.tags.map(t => `<span class="tag-pill">${t}</span>`).join("")}</div>`
+                    : "";
+
+                item.innerHTML = `
+                    <div class="card-header">
+                        <h3>${spot.name}</h3>
+                        <span class="badge">${spot.category}</span>
+                    </div>
+                    <div class="city-label">${spot.city}</div>
+                    <p>${spot.description}</p>
+                    ${tagsHtml}
+                `;
+
+                item.addEventListener("click", () => openModal(spot));
+                hotspotList.appendChild(item);
+            });
+        }
+
+        // Event Listeners
+        cityFilter.addEventListener("change", renderHotspots);
+        tagFilter.addEventListener("change", renderHotspots);
+        searchInput.addEventListener("input", renderHotspots);
+
+        modalAddTagBtn.addEventListener("click", handleModalNewTag);
+        modalNewTagInput.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                handleModalNewTag();
+            }
+        });
+
+        closeModalBtn.addEventListener("click", closeModal);
+        tagModal.addEventListener("click", (event) => {
+            if (event.target === tagModal) closeModal();
+        });
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape" && tagModal.classList.contains("active")) {
+                closeModal();
+            }
+        });
+
+        populateTagFilter();
+        renderHotspots();
+    </script>
 </body>
 </html>
